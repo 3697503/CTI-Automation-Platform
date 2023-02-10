@@ -1,6 +1,6 @@
 # CTI Automation Platform
 
-Planned Platform Stack (Stage 1):
+## Planned Platform Stack (Stage 1):
 * MISP deployment via Docker Compose
   * Base OS: Ubuntu Focal
   * MISP_Web Container: 2GB RAM
