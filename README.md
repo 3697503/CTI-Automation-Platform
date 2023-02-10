@@ -35,3 +35,6 @@ MISP Instance Architectural Components:
 [MISP dependencies](https://wlcg-soc-wg-doc.web.cern.ch/misp/deployment.html)
 - Redis
 - MySQL Server
+
+Ingesting logs into ELK:
+https://unicornsec.com/home/siem-home-lab-series-part-2
