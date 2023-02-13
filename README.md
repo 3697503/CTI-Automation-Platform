@@ -6,11 +6,14 @@
   * MISP_Web Container: 2GB RAM
   * MySQL Server Container: 2GB Memory Limit
 * Elastic SIEM (agent based)
+  * MISP Filebeat Module Container
+  * Windows Integration
 * Windows-based Malware Analysis Virtual Machine (VM)
   * Deployed via Vagrant (for quick teardown and re-creation)
   * Provisioned via Ansible (Chocolatey) and Powershell Scripts
   * Would include tools such as Regshot, TShark/TCPDump, Process Hacker etc.
   * Would be running the Elastic SIEM agent for log collection and analysis
+  * Would be running Sysmon
 * Node for storing encrypted payloads (this may be possible within MISP itself)
 * PyMISP based scripts for deploying payloads to the sandbox for threat emulation (fixed scenarios)
 * Jupyter Notebooks for dashboarding and generating various CTI-related metrics, and performing link analysis (graph visualization), MITRE ATT&CK Heatmap
@@ -38,3 +41,4 @@ MISP Instance Architectural Components:
 
 Ingesting logs into ELK:
 https://unicornsec.com/home/siem-home-lab-series-part-2
+
