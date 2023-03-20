@@ -1,0 +1,10 @@
+.vim
+data/
+venv/
+.venv/
+*.pem
+.env
+logstash/
+.vagrant
+not_in_use/
+meterpreter-0.exe
