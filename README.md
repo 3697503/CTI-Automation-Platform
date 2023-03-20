@@ -41,3 +41,9 @@ MISP Instance Architectural Components:
 
 Ingesting logs into ELK:
 https://unicornsec.com/home/siem-home-lab-series-part-2
+
+## Useful Resources
+https://docs.rapid7.com/metasploit/running-metasploit-remotely/
+https://developer.hashicorp.com/vagrant/docs/providers/virtualbox/networking
+https://www.scanforsecurity.com/penetration-testing/automating-actions-attacker-using-metasploit-and-python.html
+
