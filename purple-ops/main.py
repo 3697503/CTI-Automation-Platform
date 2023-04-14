@@ -2,7 +2,6 @@ from pymisp import PyMISP, MISPEvent
 import json
 import jmespath
 from pymetasploit3.msfrpc import MsfRpcClient
-from datetime import datetime
 from tenacity import retry, stop_after_delay, wait_fixed
 
 msf_server = "127.0.0.1"
