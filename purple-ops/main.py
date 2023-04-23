@@ -68,7 +68,9 @@ def read_misp_event(event_id):
     print("[*] Found below MITRE ATT&CK TTPs:")
     for item in galaxy_clusters:
         print(f"{item['value']}")
-
+        attck_id = item['meta']['external_id'][0]
+        if attck_id.startswith('T'):
+            execute_attck(attck_id)
         # purple
 
     # Get malware samples
@@ -92,10 +94,10 @@ def download_misp_payload(payload, execute=True):
     if execute:
         sessions = MSF_CLIENT.sessions.list
         main_msf_session_key = list(sessions.keys())[0]
-        main_msf_session = sessions[main_msf_session_key]
         print(f"[*] Selecting Session {main_msf_session_key}")
         shell = MSF_CLIENT.sessions.session(main_msf_session_key)
-        print(shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None))
+        output = shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None, exit_shell=False)
+        print(output)
 
 # Connect to meterpreter
 @retry(stop=stop_after_delay(300))
@@ -123,11 +125,13 @@ def meterpreter_connect():
     print(shell.run_shell_cmd_with_output("net accounts", None))  
 
 def execute_attck(attck_id):
-    exploit = MSF_CLIENT.modules.use(f'post', 'windows/purple/{attck_id}')
+    print(f"[+] Executing {attck_id.capitalize()}")
+    exploit = MSF_CLIENT.modules.use('post', f'windows/purple/{attck_id.lower()}')
     exploit['SESSION'] = main_msf_session_key
     console_id = MSF_CLIENT.consoles.console().cid
     console = MSF_CLIENT.consoles.console(console_id)
-    console.run_module_with_output(exploit)
+    output = console.run_module_with_output(exploit)
+    print(output)
 
 
 def main():
