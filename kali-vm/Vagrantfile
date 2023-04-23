@@ -68,6 +68,17 @@ Vagrant.configure("2") do |config|
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
-    msfrpcd -U msf -P metasploit
-  SHELL
+    if netstat -lp | grep "msfrpcd" > /dev/null; then
+      echo "Msfrpcd is running."
+    else
+      msfrpcd -U msf -P metasploit
+    fi
+
+    if ! [ -d /home/vagrant/.msf4/modules/post/windows/purple ]; then
+      mkdir /home/vagrant/.msf4/modules/post/windows/purple &&
+      unzip /vagrant/purple.zip -d ~/home/vagrant/.msf4/modules/post/windows/purple/ 
+    else
+      echo "Purple modules exist."
+    fi
+    SHELL
 end

