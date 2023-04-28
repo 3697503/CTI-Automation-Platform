@@ -26,9 +26,11 @@ main_msf_session = None
 MSF_CLIENT = None
 MISP_CLIENT = None
 
-# Initialize MSF Connection
 @retry(wait=wait_fixed(5))
 def init_msf():
+    """
+    Initialize MSF Connection
+    """
     try :
         client = MsfRpcClient(MSF_PASSWORD, port=MSF_RPC_PORT, server=MSF_SERVER, ssl=True)
         print("[*] Connected to Metasploit")
@@ -37,9 +39,11 @@ def init_msf():
         raise Exception("[-] Failed to connect to Metasploit")
     return None
 
-# Initialize MISP Connection
 @retry(wait=wait_fixed(5))
 def init_misp():
+    """
+    Initialize MISP Connection
+    """
     try:
         misp = PyMISP(MISP_URL, MISP_TOKEN)
         print("[*] Connected to MISP")
@@ -48,8 +52,10 @@ def init_misp():
         raise Exception("[-] Failed to connect to MISP")
     return None
 
-# Read a given MISP event
 def read_misp_event(event_id):
+    """
+    Read a given MISP event
+    """
     print()
     print(f"[*] Reading Event #{event_id}")
     event = MISP_CLIENT.get_event(event_id)
@@ -79,6 +85,9 @@ def read_misp_event(event_id):
 
 
 def download_misp_payload(payload, execute=True):
+    """
+    Drop payload to Win VM and execute it if set to True
+    """
     name, hash = payload['value'].split('|')
     print(f"[+] Saving {name} to Windows VM.\n\tHash: {hash}")
     with open(f'{PAYLOAD_DOWNLOAD_PATH}/{name}.zip', 'wb') as w_payload:
@@ -98,9 +107,11 @@ def download_misp_payload(payload, execute=True):
         output = shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None, exit_shell=False)
         print(output)
 
-# Connect to meterpreter
 @retry(stop=stop_after_delay(300))
 def meterpreter_connect():
+    """
+    Connect to Meterpreter (meterpreter-0.exe running on Win VM)
+    """
     global main_msf_session 
     print()
     print("[*] Configuring Metasploit Exploit...")
@@ -125,6 +136,9 @@ def meterpreter_connect():
     print(shell.run_shell_cmd_with_output("net accounts", None))  
 
 def execute_attck(attck_id):
+    """
+    Execute a Metasploit Purple module that is named as the given ATT&CK ID
+    """
     print(f"[+] Executing {attck_id.capitalize()}")
     exploit = MSF_CLIENT.modules.use('post', f'windows/purple/{attck_id.lower()}')
     exploit['SESSION'] = main_msf_session_key
