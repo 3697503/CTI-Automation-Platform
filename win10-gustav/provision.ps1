@@ -51,6 +51,7 @@ $Shortcut.Save()
 cp "C:\Users\vagrant\vagrant_data\Winlogbeat\" "C:\Program Files\"
 cd "C:\Program Files\Winlogbeat\"
 .\install-service-winlogbeat.ps1
+.\winlogbeat.exe -c winlogbeat.yml -e
 .\winlogbeat.exe setup -e
 Start-Service winlogbeat
 

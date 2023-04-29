@@ -84,7 +84,9 @@ setup.kibana:
   # Scheme and port can be left out and will be set to the default (http and 5601)
   # In case you specify and additional path, the scheme is required: http://localhost:5601/path
   # IPv6 addresses should always be defined as: https://[2001:db8::1]:5601
-  host: "192.168.121.35:5601"
+  host: "52.2.249.116:5601"
+  user: "elastic"
+  password: "I880^y&L8KOO"
 
   # Kibana Space ID
   # ID of the Kibana Space into which the dashboards should be loaded. By default,
@@ -111,7 +113,7 @@ setup.kibana:
 # ---------------------------- Elasticsearch Output ----------------------------
 output.elasticsearch:
   # Array of hosts to connect to.
-  hosts: ["192.168.121.35:9200"]
+  hosts: ["52.2.249.116:9200"]
 
   # Protocol - either `http` (default) or `https`.
   protocol: "http"
@@ -119,11 +121,12 @@ output.elasticsearch:
   # Authentication credentials - either API key or username/password.
   #api_key: "id:api_key"
   username: "elastic"
-  password: "p@ssw0rd"
+  password: "I880^y&L8KOO"
 
   # Pipeline to route events to security, sysmon, or powershell pipelines.
   pipeline: "winlogbeat-%{[agent.version]}-routing"
-
+  
+  allow_older_versions: true
 # ------------------------------ Logstash Output -------------------------------
 #output.logstash:
   # The Logstash hosts
