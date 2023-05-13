@@ -10,3 +10,4 @@ logstash/
 not_in_use/
 meterpreter-0.exe
 payloads/
+__pycache__
