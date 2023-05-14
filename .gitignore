@@ -11,3 +11,5 @@ not_in_use/
 meterpreter-0.exe
 payloads/
 __pycache__
+Analysis_Logs/
+Payloads/
