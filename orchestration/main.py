@@ -3,8 +3,6 @@
 # Save malware analysis logs to MISP
 # Create some meaningful reports in MISP
 #
-
-
 from pymisp import PyMISP, MISPEvent
 import json
 import jmespath
@@ -19,6 +17,11 @@ import subprocess
 # from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 from time import sleep
+import argparse
+
+parser = argparse.ArgumentParser(description="CLI utility for enriching MISP events with Malware Analysis and Adversary Emulation operations.")
+parser.add_argument('-m', '--mode', type=str, help="Specify operation mode i.e. malware or purple", required=True)
+args = parser.parse_args()
 
 with open('config.yml', 'r') as file:
     config = yaml.safe_load(file)
@@ -30,10 +33,11 @@ MSF_LHOST = config['msf']['LHOST']
 MSF_LPORT = config['msf']['LPORT']
 MISP_URL = config['misp']['url']
 MISP_TOKEN = config['misp']['api_token']
-PAYLOAD_DOWNLOAD_PATH = config['misp']['payload_download_path']
+PAYLOAD_DOWNLOAD_PATH_PURPLE = config['misp']['payload_download_path_purple']
+PAYLOAD_DOWNLOAD_PATH_MALWARE = config['misp']['payload_download_path_malware']
 KALI_PATH = config['virt_machines']['kali']
 WIN_PURPLE_PATH = config['virt_machines']['win-purple']
-
+WIN_MALWARE_PATH = config['virt_machines']['win-malware']
 
 main_msf_session_key = 1
 main_msf_session = None
@@ -42,6 +46,11 @@ msf_active = False
 MSF_CLIENT = None
 MISP_CLIENT = None
 
+PAYLOAD_DOWNLOAD_PATH = None
+if args.mode == 'malware':
+    PAYLOAD_DOWNLOAD_PATH = PAYLOAD_DOWNLOAD_PATH_MALWARE
+elif args.mode == 'purple':
+    PAYLOAD_DOWNLOAD_PATH = PAYLOAD_DOWNLOAD_PATH_PURPLE
 
 @retry(wait=wait_fixed(5))
 def init_msf():
@@ -179,6 +188,9 @@ def print_info(msg):
     print(colored(msg, 'green'))
 
 def vagrant_cmd(template_path, vagrant_cmd):
+    """
+    Run a Vagrant cmdlet. Eg. - vagrant up
+    """
     cmd = f"cd {template_path} && vagrant {vagrant_cmd}"
     print_info(f"Running: {cmd}" )
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -199,15 +211,17 @@ def main():
     MSF_CLIENT = init_msf()
     thread = threading.Thread(target=meterpreter_connect)
     thread.start()
-    vagrant_cmd(WIN_PURPLE_PATH, 'up')
-    
+    if args.mode == 'purple':
+        vagrant_cmd(WIN_PURPLE_PATH, 'up')
+    elif args.mode == 'malware':
+        vagrant_cmd(WIN_MALWARE_PATH, 'up')
     while msf_active == False:
         sleep(60)
         vagrant_winrm("C:\vagrant\meterpreter-0.exe")
 
     thread.join()
     print()
-    event_id = input("[*] Input MISP Event ID to emulate: ")
+    event_id = input("[*] Input MISP Event ID: ")
     
     read_misp_event(event_id)
 
