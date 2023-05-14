@@ -2,6 +2,11 @@ import os
 import time
 from apscheduler.schedulers.background import BackgroundScheduler, BlockingScheduler
 from ioc_finder import find_iocs
+import logging
+from rich import print
+from rich.logging import RichHandler
+
+logging.basicConfig(level=logging.INFO, handlers=[RichHandler()])
 
 # Set the directory to monitor
 LOGS_DIR = "../win-malware/Analysis_Logs"
@@ -22,25 +27,25 @@ files = set(os.listdir(LOGS_DIR))
 def check_new_log():
     global files;
     current_files = set(os.listdir(LOGS_DIR))
-    print("Curr Files: " + str(current_files))
+    logging.info("Current Files: " + str(current_files))
     new_files = current_files - files
 
     if new_files:
-        print("New Files: " + str(new_files))
         process_logs(new_files)
     else:
         print("No new files found")
 
     files = current_files
-    print("Resting for 5 seconds")
+    logging.info("Resting for 5 seconds")
 
 def process_logs(log_files):
+    logging.info("Processing new logs: " + str(log_files))
     for file in log_files:
         if file == 'pestr_log.txt':
             process_pestr()
 
 def process_pestr():
-    print("[+] Processing pestr_log.txt")
+    logging.info("Processing pestr_log.txt")
     with open(f'{LOGS_DIR}/pestr_log.txt', encoding='utf-16') as r_file: 
         file_content = r_file.read()
         iocs = find_iocs(file_content)
@@ -48,9 +53,9 @@ def process_pestr():
 
 
 def main():
-    print("[+] LogWatcher initiated...")
+    logging.info("LogWatcher initiated...")
     scheduler = BlockingScheduler() 
-    scheduler.add_job(check_new_log, 'interval', seconds=5, max_instances=3)
+    scheduler.add_job(check_new_log, 'interval', seconds=5)
     try:
         scheduler.start()
     except KeyboardInterrupt:

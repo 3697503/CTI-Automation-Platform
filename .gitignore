@@ -13,3 +13,4 @@ payloads/
 __pycache__
 Analysis_Logs/
 Payloads/
+.vscode
