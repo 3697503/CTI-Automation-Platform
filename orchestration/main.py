@@ -2,7 +2,8 @@
 # Implement logic for running TTPs in a sequence
 # Save malware analysis logs to MISP
 # Create some meaningful reports in MISP
-#
+# Replace print with rich logging
+
 from pymisp import PyMISP, MISPEvent
 import json
 import jmespath
@@ -18,9 +19,11 @@ import subprocess
 import threading
 from time import sleep
 import argparse
+from logwatcher import LogWatcher
 
 parser = argparse.ArgumentParser(description="CLI utility for enriching MISP events with Malware Analysis and Adversary Emulation operations.")
 parser.add_argument('-m', '--mode', type=str, help="Specify operation mode i.e. malware or purple", required=True)
+parser.add_argument('-e', '--event-id', type=str, help="MISP Event ID", required=True)
 args = parser.parse_args()
 
 with open('config.yml', 'r') as file:
@@ -101,9 +104,8 @@ def read_misp_event(event_id):
     for item in galaxy_clusters:
         print(f"{item['value']}")
         attck_id = item['meta']['external_id'][0]
-        if attck_id.startswith('T'):
+        if args.mode == 'purple' and attck_id.startswith('T'):
             execute_attck(attck_id)
-        # purple
 
     # Get malware samples
     print()
@@ -112,7 +114,7 @@ def read_misp_event(event_id):
         download_misp_payload(item)
 
 
-def download_misp_payload(payload, execute=True):
+def download_misp_payload(payload):
     """
     Drop payload to Win VM and execute it if set to True
     """
@@ -126,7 +128,7 @@ def download_misp_payload(payload, execute=True):
 
     os.rename(f'{PAYLOAD_DOWNLOAD_PATH}/{hash}', f'{PAYLOAD_DOWNLOAD_PATH}/{name}')
 
-    if execute:
+    if args.mode == 'purple':
         sessions = MSF_CLIENT.sessions.list
         main_msf_session_key = list(sessions.keys())[0]
         print_info(f"[*] Selecting Session {main_msf_session_key}")
@@ -134,6 +136,10 @@ def download_misp_payload(payload, execute=True):
         print_info("[*] Executing payload")
         output = shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None, exit_shell=False)
         print(output)
+    elif args.mode == 'malware':
+        print_info("[*] Executing Analysis Script")
+        cmd = f"cd {WIN_MALWARE_PATH} && vagrant winrm --shell powershell --elevated --command 'C:\\Users\\vagrant\\vagrant_data\\analysis.ps1 {name}'"
+        vagrant_winrm(cmd)
 
 @retry(stop=stop_after_delay(600))
 def meterpreter_connect():
@@ -196,33 +202,41 @@ def vagrant_cmd(template_path, vagrant_cmd):
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(result)
 
-def vagrant_winrm(powershell_cmd):
-    powershell_cmd = f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command '{powershell_cmd}'" 
-    result = subprocess.run(powershell_cmd, shell=True, capture_output=True, text=True)
+def vagrant_winrm(cmd):
+    # powershell_cmd = f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command '{powershell_cmd}'" 
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(result.stdout)
 
 def main():
     global MSF_CLIENT
     global MISP_CLIENT
     global main_msf_session
-    
+    global msf_active
+
     MISP_CLIENT = init_misp()
-    vagrant_cmd(KALI_PATH, 'up')
-    MSF_CLIENT = init_msf()
-    thread = threading.Thread(target=meterpreter_connect)
-    thread.start()
+    event_id = args.event_id
+
     if args.mode == 'purple':
-        vagrant_cmd(WIN_PURPLE_PATH, 'up')
+        vagrant_cmd(KALI_PATH, 'up')
+        MSF_CLIENT = init_msf()
+        thread = threading.Thread(target=meterpreter_connect)
+        thread.start()                                          # Start thread to connect to meterpreter
+        vagrant_cmd(WIN_PURPLE_PATH, 'up')                      # Startup Purple Win VM
+        while msf_active == False:                              # Exec meterpreter till a connection is established                         
+            sleep(60)
+            cmd = f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command 'C:\\vagrant\\meterpreter-0.exe'"
+            vagrant_winrm(cmd) 
+        print()
+        read_misp_event(event_id)
+        thread.join()
     elif args.mode == 'malware':
         vagrant_cmd(WIN_MALWARE_PATH, 'up')
-    while msf_active == False:
-        sleep(60)
-        vagrant_winrm("C:\vagrant\meterpreter-0.exe")
-
-    thread.join()
-    print()
-    event_id = input("[*] Input MISP Event ID: ")
-    
-    read_misp_event(event_id)
+        logwatcher = LogWatcher()
+        logwatcher.misp_client = MISP_CLIENT
+        thread = threading.Thread(target=logwatcher.run)
+        thread.start()
+        print()
+        read_misp_event(event_id)
+        thread.join()
 
 main()

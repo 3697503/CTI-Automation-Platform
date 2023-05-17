@@ -14,3 +14,5 @@ __pycache__
 Analysis_Logs/
 Payloads/
 .vscode
+.vagrant
+*.log
