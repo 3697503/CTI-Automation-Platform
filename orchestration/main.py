@@ -41,6 +41,7 @@ PAYLOAD_DOWNLOAD_PATH_MALWARE = config['misp']['payload_download_path_malware']
 KALI_PATH = config['virt_machines']['kali']
 WIN_PURPLE_PATH = config['virt_machines']['win-purple']
 WIN_MALWARE_PATH = config['virt_machines']['win-malware']
+LOGS_DIR = config['misp']['logs_dir']
 
 main_msf_session_key = 1
 main_msf_session = None
@@ -229,10 +230,10 @@ def main():
         print()
         read_misp_event(event_id)
         thread.join()
+    
     elif args.mode == 'malware':
-        vagrant_cmd(WIN_MALWARE_PATH, 'up')
-        logwatcher = LogWatcher()
-        logwatcher.misp_client = MISP_CLIENT
+        # vagrant_cmd(WIN_MALWARE_PATH, 'up')
+        logwatcher = LogWatcher(LOGS_DIR, MISP_CLIENT, event_id)
         thread = threading.Thread(target=logwatcher.run)
         thread.start()
         print()
