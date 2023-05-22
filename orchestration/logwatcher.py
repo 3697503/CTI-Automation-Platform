@@ -85,7 +85,7 @@ class LogWatcher():
         event_dict = self.misp_client.update_event(self.misp_event_obj)
 
     def convert_to_attribute(self, ioc_type, value, analysis_tool):
-        print('Converting {} of type {}'.format(value, ioc_type))
+        logging.info('Converting {} to attribute'.format(value))
         attribute = MISPAttribute(strict=False)
         attribute.value=value
         attribute.type=ioc_type
