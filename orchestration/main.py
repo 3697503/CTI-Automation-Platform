@@ -232,7 +232,7 @@ def main():
         thread.join()
     
     elif args.mode == 'malware':
-        # vagrant_cmd(WIN_MALWARE_PATH, 'up')
+        vagrant_cmd(WIN_MALWARE_PATH, 'up')
         logwatcher = LogWatcher(LOGS_DIR, MISP_CLIENT, event_id)
         thread = threading.Thread(target=logwatcher.run)
         thread.start()
