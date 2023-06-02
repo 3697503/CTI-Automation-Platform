@@ -1,5 +1,5 @@
 """
-TODO - Upload Logs to MISP 
+TODO - Track State of Logs and process fakenet, autoruns
 """
 
 import os
@@ -36,7 +36,9 @@ class LogWatcher():
             'pehash_log.json',
             'peldd_log.json',
             'pescan_log.json',
-            'fakenet_log.pcap'
+            'fakenet_log.pcap',
+            'fakenet_log.txt',
+            'autoruns_log.txt'
         ]
 
     def check_new_log(self):
@@ -53,6 +55,7 @@ class LogWatcher():
 
         # logging.info("Resting for 5 seconds")
 
+    # TODO - Process Fakenet TXT and Autoruns
     def process_logs(self, log_files):
         logging.info("Processing new logs: " + str(log_files))
         for file in log_files:
@@ -62,8 +65,8 @@ class LogWatcher():
                 self.process_pestr()
             elif file == 'capa_log.json':
                 self.process_capa()
-            elif file == 'pehash_log.json' or file == 'pescan_log.json' or file == 'capa_log.txt' or file == 'fakenet_log.pcap':
-                self.upload_file(file)
+            
+            self.upload_file(file)
 
     def process_capa(self):
         logfile_name = 'capa_log.json'
@@ -111,7 +114,6 @@ class LogWatcher():
         file_content_bytes = file_content.encode("ascii")
         logging.info('Checking for IOCs in PEStr output')
         iocs = find_iocs(file_content)
-        logging.info(iocs)
         misp_type_mappings = {
             'domains': 'domain',
             'urls': 'url',
@@ -184,8 +186,6 @@ class LogWatcher():
         scheduler = BlockingScheduler() 
         scheduler.add_job(self.check_new_log, 'interval', seconds=5, max_instances=3)
         try:
-            # while True:
-                # self.check_new_log()
             logging.info('Cleaning up...')
             subprocess.run(f'rm -rf {self.LOGS_DIR}/*', shell=True)
             self.files = set(os.listdir(self.LOGS_DIR))

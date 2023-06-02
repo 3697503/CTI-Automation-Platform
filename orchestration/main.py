@@ -208,6 +208,11 @@ def vagrant_winrm(cmd):
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(result.stdout)
 
+def cleanup():
+    print_info("Cleaning Up...")
+    subprocess.run(f'rm -rf {self.LOGS_DIR}/*', shell=True)
+    subproces.run(f'rm -rf {self.PAYLOAD_DOWNLOAD_PATH_MALWARE}/*', shell=True)
+
 def main():
     global MSF_CLIENT
     global MISP_CLIENT
@@ -232,12 +237,13 @@ def main():
         thread.join()
     
     elif args.mode == 'malware':
-        vagrant_cmd(WIN_MALWARE_PATH, 'up')
+        vagrant_cmd(WIN_MALWARE_PATH, 'snapshot restore base')
         logwatcher = LogWatcher(LOGS_DIR, MISP_CLIENT, event_id)
         thread = threading.Thread(target=logwatcher.run)
         thread.start()
         print()
         read_misp_event(event_id)
         thread.join()
+        cleanup()
 
 main()
