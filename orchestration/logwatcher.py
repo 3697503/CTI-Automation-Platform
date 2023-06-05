@@ -15,6 +15,7 @@ import base64
 import json
 import jmespath
 import subprocess
+import csv
 
 class LogWatcher():
 
@@ -30,16 +31,28 @@ class LogWatcher():
         self.misp_event_obj.from_dict(**misp_event_dict)
         self.sandbox_tag = 'enriched_via_sandbox'
         self.enabled_logs = [
-            'pestr_log.txt',
-            'capa_log.json',
-            'capa_log.txt',
-            'pehash_log.json',
-            'peldd_log.json',
-            'pescan_log.json',
-            'fakenet_log.pcap',
-            'fakenet_log.txt',
-            'autoruns_log.txt'
+            # 'pestr_log.txt',
+            # 'capa_log.json',
+            # 'capa_log.txt',
+            # 'pehash_log.json',
+            # 'peldd_log.json',
+            # 'pescan_log.json',
+            # 'fakenet_log.pcap',
+            # 'fakenet_log.txt',
+            'autoruns_log.txt',
+            'autoruns_log.csv'
         ]
+        #ioc-type --> misp_ioc_type
+        self.misp_type_mappings = {
+            'domains': 'domain',
+            'urls': 'url',
+            'ipv4s': 'ip-dst',
+            'email_addresses': 'email',
+            'md5s': 'md5',
+            'sha1s': 'sha1',
+            'sha256s': 'sha256',
+            'bitcoin_addresses': 'btc',
+        }
 
     def check_new_log(self):
         current_files = set(os.listdir(self.LOGS_DIR))
@@ -65,8 +78,24 @@ class LogWatcher():
                 self.process_pestr()
             elif file == 'capa_log.json':
                 self.process_capa()
+            elif file == 'fakenet_log.txt':
+                self.process_unstructured(file)
+            elif file == 'autoruns_log.csv':
+                self.process_autoruns()
             
             self.upload_file(file)
+
+    def process_autoruns(self):
+        logfile_name = 'autoruns_log.csv'
+        logging.info("Processing {}".format(logfile_name))
+        with open('{}/{}'.format(self.LOGS_DIR, logfile_name), 'r', encoding='utf-16') as r_file:
+            csvreader = csv.DictReader(r_file)
+            for row in csvreader:
+                if row['Entry Location'] and row['Entry']:
+                    regkey_val = '{}|{}'.format(row['Entry Location'], row['Entry'])
+                    attribute = self.convert_to_attribute(regkey_val, 'autoruns', misp_ioc_type='regkey|value')
+                    self.misp_event_obj.add_attribute(**attribute)
+                    self.misp_client.update_event(self.misp_event_obj)
 
     def process_capa(self):
         logfile_name = 'capa_log.json'
@@ -114,37 +143,54 @@ class LogWatcher():
         file_content_bytes = file_content.encode("ascii")
         logging.info('Checking for IOCs in PEStr output')
         iocs = find_iocs(file_content)
-        misp_type_mappings = {
-            'domains': 'domain',
-            'urls': 'url',
-            'ipv4s': 'ip-dst',
-            'email_addresses': 'email',
-            'md5s': 'md5',
-            'sha1s': 'sha1',
-            'sha256s': 'sha256',
-            'bitcoin_addresses': 'btc'
-        }
-        for ioc_type in misp_type_mappings.keys():
+        for ioc_type in self.misp_type_mappings.keys():
             for ioc in iocs[ioc_type]:
-                attribute = self.convert_to_attribute(misp_type_mappings[ioc_type], ioc, 'pestr')
+                attribute = self.convert_to_attribute(ioc, 'pestr', ioc_type=ioc_type)
                 self.misp_event_obj.add_attribute(**attribute)
 
         # Upload PEStr file
-        self.misp_event_obj.add_attribute(
-            'attachment', 
-            value=logfile_name,
-            data=base64.b64encode(file_content_bytes)
-        )
+        # self.misp_event_obj.add_attribute(
+        #     'attachment', 
+        #     value=logfile_name,
+        #     data=base64.b64encode(file_content_bytes)
+        # )
+        self.upload_file(logfile_name)
         self.misp_event_obj.add_tag(self.sandbox_tag)
 
         ## Push the updated event to MISP
         self.misp_client.update_event(self.misp_event_obj)
 
-    def convert_to_attribute(self, ioc_type, value, analysis_tool):
+    def process_unstructured(self, logfile_name):
+        """
+        Run Strings through ioc-finder to detect any IOCs. 
+        Convert those IOCs into MISP attributes and attach to the MISP event.
+        """
+        logging.info("Processing {}".format(logfile_name))
+        file_content = self.get_log_file(logfile_name)
+        file_content_bytes = file_content.encode("ascii")
+        logging.info('Checking for IOCs in PEStr output')
+        iocs = find_iocs(file_content)
+        
+        
+        for ioc_type in misp_type_mappings.keys():
+            for ioc in iocs[ioc_type]:
+                attribute = self.convert_to_attribute(misp_type_mappings[ioc_type], ioc, logfile_name.split('_')[0])
+                self.misp_event_obj.add_attribute(**attribute)
+
+        self.upload_file(logfile_name)
+        self.misp_event_obj.add_tag(self.sandbox_tag)
+
+        ## Push the updated event to MISP
+        self.misp_client.update_event(self.misp_event_obj)
+
+    def convert_to_attribute(self, value, analysis_tool, ioc_type=None, misp_ioc_type=None):
+        if not ioc_type and not misp_ioc_type:
+            raise Exception(('Invalid IOC'))
+
         logging.info('Converting {} to attribute'.format(value))
         attribute = MISPAttribute(strict=False)
         attribute.value=value
-        attribute.type=ioc_type
+        attribute.type=self.misp_type_mappings[ioc_type] if ioc_type else misp_ioc_type
         attribute.category= 'Artifacts dropped' if ioc_type in ['md5', 'sha1', 'sha256'] else 'Network activity'
         attribute.comment='Source Tool: {}'.format(analysis_tool)
         attribute.add_tag(analysis_tool)
