@@ -46,6 +46,7 @@ LOGS_DIR = config['misp']['logs_dir']
 main_msf_session_key = 1
 main_msf_session = None
 msf_active = False
+logwatcher = None
 
 MSF_CLIENT = None
 MISP_CLIENT = None
@@ -142,6 +143,7 @@ def download_misp_payload(payload):
         cmd = f"cd {WIN_MALWARE_PATH} && vagrant winrm --shell powershell --elevated --command 'C:\\Users\\vagrant\\vagrant_data\\analysis.ps1 {name}'"
         vagrant_winrm(cmd)
 
+
 @retry(stop=stop_after_delay(600))
 def meterpreter_connect():
     """
@@ -210,14 +212,17 @@ def vagrant_winrm(cmd):
 
 def cleanup():
     print_info("Cleaning Up...")
-    subprocess.run(f'rm -rf {self.LOGS_DIR}/*', shell=True)
-    subproces.run(f'rm -rf {self.PAYLOAD_DOWNLOAD_PATH_MALWARE}/*', shell=True)
-
+    subprocess.run(f'rm -rf {LOGS_DIR}/*', shell=True)
+    subprocess.run(f'rm -rf {PAYLOAD_DOWNLOAD_PATH_MALWARE}/*', shell=True)
+    vagrant_cmd(WIN_MALWARE_PATH, 'halt')
+    exit()
+    
 def main():
     global MSF_CLIENT
     global MISP_CLIENT
     global main_msf_session
     global msf_active
+    global logwatcher
 
     MISP_CLIENT = init_misp()
     event_id = args.event_id
@@ -244,6 +249,8 @@ def main():
         print()
         read_misp_event(event_id)
         thread.join()
-        cleanup()
-
-main()
+try:
+    main()
+except KeyboardInterrupt:
+    cleanup()
+    exit()

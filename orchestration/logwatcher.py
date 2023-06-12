@@ -9,13 +9,15 @@ from ioc_finder import find_iocs
 import logging
 from rich import print
 from rich.logging import RichHandler
-logging.basicConfig(level=logging.INFO, filename='logwatcher.log', filemode='w')
 from pymisp import MISPEvent, MISPAttribute
 import base64
 import json
 import jmespath
 import subprocess
 import csv
+from scapy.all import *
+
+logging.basicConfig(level=logging.INFO, filename='logwatcher.log', filemode='w')
 
 class LogWatcher():
 
@@ -31,17 +33,56 @@ class LogWatcher():
         self.misp_event_obj.from_dict(**misp_event_dict)
         self.sandbox_tag = 'enriched_via_sandbox'
         self.enabled_logs = [
-            # 'pestr_log.txt',
-            # 'capa_log.json',
-            # 'capa_log.txt',
-            # 'pehash_log.json',
-            # 'peldd_log.json',
-            # 'pescan_log.json',
-            # 'fakenet_log.pcap',
-            # 'fakenet_log.txt',
-            'autoruns_log.txt',
-            'autoruns_log.csv'
+            # {
+            #     'name': 'pestr_log.txt',
+            #     'status': False
+            # },
+            # {
+            #     'name': 'capa_log.json',
+            #     'status': False
+            # },
+            # {
+            #     'name': 'capa_log.txt',
+            #     'status': False
+            # },
+            # {
+            #     'name': 'pehash_log.json', 
+            #     'status': False
+            # },
+            # {
+            #     'name': 'peldd_log.json', 
+            #     'status': False 
+            # },
+            # {
+            #     'name': 'pescan_log.json', 
+            #     'status': False
+            # },
+            {
+                'name': 'fakenet_log.pcap',
+                'status': False
+            },
+            {
+                'name': 'fakenet_log.txt',
+                'status': False
+            },
+            # {
+            #     'name': 'autoruns_log.txt',
+            #     'status': False 
+            # },
+            # {
+            #     'name': 'autoruns_log.csv',
+            #     'status': False
+            # },
+            # {
+            #     'name': 'procmon_log.pml',
+            #     'status': False
+            # },
+            # {
+            #     'name': 'procmon_log.csv',
+            #     'status': False
+            # }
         ]
+        
         #ioc-type --> misp_ioc_type
         self.misp_type_mappings = {
             'domains': 'domain',
@@ -68,25 +109,30 @@ class LogWatcher():
 
         # logging.info("Resting for 5 seconds")
 
-    # TODO - Process Fakenet TXT and Autoruns
     def process_logs(self, log_files):
         logging.info("Processing new logs: " + str(log_files))
+        enabled_log_names = jmespath.search("[].name", self.enabled_logs)
         for file in log_files:
-            if file not in self.enabled_logs:
+            if len([name for name in enabled_log_names if name in file]) == 0:
                 continue
-            if file == 'pestr_log.txt':
-                self.process_pestr()
-            elif file == 'capa_log.json':
-                self.process_capa()
-            elif file == 'fakenet_log.txt':
-                self.process_unstructured(file)
-            elif file == 'autoruns_log.csv':
-                self.process_autoruns()
+            if 'pestr_log.txt' in file:
+                self.process_pestr(file)
+            elif 'capa_log.json' in file:
+                self.process_capa(file)
+            elif 'fakenet_log.pcap' in file:
+                self.process_pcap(file)
+            elif 'autoruns_log.csv' in file:
+                self.process_autoruns(file)
             
             self.upload_file(file)
+            self.set_log_processed(file)
 
-    def process_autoruns(self):
-        logfile_name = 'autoruns_log.csv'
+    def set_log_processed(self, logfile_name):
+        for log in self.enabled_logs:
+            if log['name'] in logfile_name:
+                log['status'] = True
+
+    def process_autoruns(self, logfile_name):
         logging.info("Processing {}".format(logfile_name))
         with open('{}/{}'.format(self.LOGS_DIR, logfile_name), 'r', encoding='utf-16') as r_file:
             csvreader = csv.DictReader(r_file)
@@ -97,8 +143,7 @@ class LogWatcher():
                     self.misp_event_obj.add_attribute(**attribute)
                     self.misp_client.update_event(self.misp_event_obj)
 
-    def process_capa(self):
-        logfile_name = 'capa_log.json'
+    def process_capa(self, logfile_name):
         logging.info("Processing {}".format(logfile_name))
         file_content = self.get_log_file(logfile_name)
         capa_dict = json.loads(file_content)
@@ -131,13 +176,51 @@ class LogWatcher():
         )
         self.misp_client.update_event(self.misp_event_obj)
 
+    def process_pcap(self, pcap_file):
+        """
+        Extract network observables from a given PCAP and upload them to the MISP event
+        """
+        packets = rdpcap('{}/{}'.format(self.LOGS_DIR, pcap_file))
+        iocs = []
+        for packet in packets:
+            if packet.haslayer(IP):
+                src_ip = packet[IP].src
+                iocs.append((src_ip, 'ip-src'))
+                dst_ip = packet[IP].dst
+                iocs.append((dst_ip, 'ip-dst'))
+                # attribute = self.convert_to_attribute(src_ip, 'fakenet', misp_ioc_type='ip-src')
+                # self.misp_event_obj.add_attribute(**attribute)
+                # self.misp_client.update_event(self.misp_event_obj)
+                # attribute = self.convert_to_attribute(dst_ip, 'fakenet', misp_ioc_type='ip-dst')
+                # self.misp_event_obj.add_attribute(**attribute)
+                # self.misp_client.update_event(self.misp_event_obj)
 
-    def process_pestr(self):
+            if packet.haslayer(DNS):
+                for query in packet[DNSQR]:
+                    domain = query.qname.decode()
+                    iocs.append((domain, 'domain'))
+                    # attribute = self.convert_to_attribute(domain, 'fakenet', misp_ioc_type='domain')
+                    # self.misp_event_obj.add_attribute(**attribute)
+                    # self.misp_client.update_event(self.misp_event_obj)
+
+            if packet.haslayer('HTTPRequest'):
+                http_request = packet[HTTP]
+                if http_request.Method.decode() == "GET":
+                    url = http_request.Host.decode() + http_request.Path.decode()
+                    iocs.append((url, 'url'))
+                    # attribute = self.convert_to_attribute(url, 'fakenet', misp_ioc_type='url')
+                    # self.misp_event_obj.add_attribute(**attribute)
+                    # self.misp_client.update_event(self.misp_event_obj)
+        for ioc in set(iocs):
+            attribute = self.convert_to_attribute(ioc[0], 'fakenet', misp_ioc_type=ioc[1])
+            self.misp_event_obj.add_attribute(**attribute)
+            self.misp_client.update_event(self.misp_event_obj)
+
+    def process_pestr(self, logfile_name):
         """
         Run Strings through ioc-finder to detect any IOCs. 
         Convert those IOCs into MISP attributes and attach to the MISP event.
         """
-        logfile_name = 'pestr_log.txt'
         logging.info("Processing {}".format(logfile_name))
         file_content = self.get_log_file(logfile_name)
         file_content_bytes = file_content.encode("ascii")
@@ -148,12 +231,6 @@ class LogWatcher():
                 attribute = self.convert_to_attribute(ioc, 'pestr', ioc_type=ioc_type)
                 self.misp_event_obj.add_attribute(**attribute)
 
-        # Upload PEStr file
-        # self.misp_event_obj.add_attribute(
-        #     'attachment', 
-        #     value=logfile_name,
-        #     data=base64.b64encode(file_content_bytes)
-        # )
         self.upload_file(logfile_name)
         self.misp_event_obj.add_tag(self.sandbox_tag)
 
@@ -168,11 +245,9 @@ class LogWatcher():
         logging.info("Processing {}".format(logfile_name))
         file_content = self.get_log_file(logfile_name)
         file_content_bytes = file_content.encode("ascii")
-        logging.info('Checking for IOCs in PEStr output')
+        logging.info('Checking for IOCs in {} output'.format(logfile_name))
         iocs = find_iocs(file_content)
-        
-        
-        for ioc_type in misp_type_mappings.keys():
+        for ioc_type in self.misp_type_mappings.keys():
             for ioc in iocs[ioc_type]:
                 attribute = self.convert_to_attribute(misp_type_mappings[ioc_type], ioc, logfile_name.split('_')[0])
                 self.misp_event_obj.add_attribute(**attribute)
@@ -226,6 +301,16 @@ class LogWatcher():
         if splitlines:
                 file_content = file_content.splitlines()
         return file_content
+
+    def request_termination(self):
+        logging.info('Termination Requested')
+        logs_processed = jmespath.search("[].status", self.enabled_logs)
+        while True in logs_processed:
+            logging.info('{} has not been processed, delaying termination'.format(file))
+            sleep(10)
+            logs_processed = jmespath.search("[].status", self.enabled_logs)
+        logging.info('Exiting...')
+        exit()
 
     def run(self):
         logging.info("LogWatcher initiated...")
