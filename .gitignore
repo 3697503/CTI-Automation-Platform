@@ -16,3 +16,7 @@ Payloads/
 .vscode
 .vagrant
 *.log
+misp-coolacid/files
+misp-coolacid/logs
+misp-coolacid/ssl
+misp-coolacid/server-configs
