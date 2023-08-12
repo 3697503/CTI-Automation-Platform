@@ -64,6 +64,6 @@ Start-Service winlogbeat
 cd "C:\Users\vagrant\Downloads\"
 Expand-Archive .\elastic-agent.zip
 cd .\elastic-agent\elastic-agent-7.16.2-windows-x86_64
-cp "C:\Users\vagrant\vagrant_data\Elastic_Agent\elastic-agent.yml" ".\"
+cp "C:\Users\vagrant\vagrant_data\elastic_configs\elastic-agent.yml" ".\"
 .\elastic-agent install
 
