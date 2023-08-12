@@ -16,7 +16,9 @@ Payloads/
 .vscode
 .vagrant
 *.log
-misp-coolacid/files
-misp-coolacid/logs
-misp-coolacid/ssl
-misp-coolacid/server-configs
+docker_misp/files
+docker_misp/logs
+docker_misp/ssl
+docker_misp/server-configs
+winlogbeat.yml
+elastic-agent.yml

@@ -1,5 +1,10 @@
 # CTI Automation Platform
 
+- Use Vagrant 2.3.6 (WinRM Errors)
+- Add Elastic Agent Windows Integration
+- Add Prebuilt Rules
+
+
 ## Planned Platform Stack (Stage 1):
 * MISP deployment via Docker Compose
   * Base OS: Ubuntu Focal

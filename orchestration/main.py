@@ -77,7 +77,7 @@ def init_misp():
     Initialize MISP Connection
     """
     try:
-        misp = PyMISP(MISP_URL, MISP_TOKEN)
+        misp = PyMISP(MISP_URL, MISP_TOKEN, ssl=False)
         print_info("[*] Connected to MISP")
         return misp
     except Exception as e:
@@ -107,7 +107,11 @@ def read_misp_event(event_id):
         print(f"{item['value']}")
         attck_id = item['meta']['external_id'][0]
         if args.mode == 'purple' and attck_id.startswith('T'):
-            execute_attck(attck_id)
+            try:
+                execute_attck(attck_id)
+            except Exception as e:
+                print_error(f'Error encountered while attempting {attck_id} - {e}')
+                pass
 
     # Get malware samples
     print()
@@ -120,6 +124,7 @@ def download_misp_payload(payload):
     """
     Drop payload to Win VM and execute it if set to True
     """
+    global main_msf_session_key
     name, hash = payload['value'].split('|')
     print_info(f"[*] Saving {name} to Windows VM.\n\tHash: {hash}")
     with open(f'{PAYLOAD_DOWNLOAD_PATH}/{name}.zip', 'wb') as w_payload:
@@ -151,6 +156,7 @@ def meterpreter_connect():
     """
     global main_msf_session
     global msf_active
+    global main_msf_session_key
     try:
         print()
         print_info("[*] Configuring Metasploit Exploit...")
@@ -184,7 +190,7 @@ def execute_attck(attck_id):
     """
     print_info(f"[+] Executing {attck_id.capitalize()}")
     exploit = MSF_CLIENT.modules.use('post', f'windows/purple/{attck_id.lower()}')
-    exploit['SESSION'] = main_msf_session_key
+    exploit['SESSION'] = int(main_msf_session_key)
     console_id = MSF_CLIENT.consoles.console().cid
     console = MSF_CLIENT.consoles.console(console_id)
     output = console.run_module_with_output(exploit)
@@ -203,7 +209,7 @@ def vagrant_cmd(template_path, vagrant_cmd):
     cmd = f"cd {template_path} && vagrant {vagrant_cmd}"
     print_info(f"Running: {cmd}" )
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    print(result)
+    # print(result)
 
 def vagrant_winrm(cmd):
     # powershell_cmd = f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command '{powershell_cmd}'" 
@@ -214,7 +220,10 @@ def cleanup():
     print_info("Cleaning Up...")
     subprocess.run(f'rm -rf {LOGS_DIR}/*', shell=True)
     subprocess.run(f'rm -rf {PAYLOAD_DOWNLOAD_PATH_MALWARE}/*', shell=True)
+    subprocess.run(f'rm -rf {PAYLOAD_DOWNLOAD_PATH_PURPLE}/*', shell=True)
     vagrant_cmd(WIN_MALWARE_PATH, 'halt')
+    vagrant_cmd(KALI_PATH, 'halt')
+    vagrant_cmd(WIN_PURPLE_PATH, 'halt')
     exit()
     
 def main():
@@ -228,7 +237,7 @@ def main():
     event_id = args.event_id
 
     if args.mode == 'purple':
-        vagrant_cmd(KALI_PATH, 'up')
+        vagrant_cmd(KALI_PATH, 'up --provision')
         MSF_CLIENT = init_msf()
         thread = threading.Thread(target=meterpreter_connect)
         thread.start()                                          # Start thread to connect to meterpreter

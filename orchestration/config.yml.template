@@ -1,0 +1,18 @@
+msf:
+  server: "127.0.0.1"
+  password: "metasploit"
+  rpc_port: "55553"
+  LHOST: "192.168.56.3"
+  LPORT: "6001"
+
+misp:
+  url: "https://localhost"
+  api_token: "<MISP TOKEN>"
+  payload_download_path_purple: "../vagrant_win10-gustav/payloads"
+  payload_download_path_malware: "../vagrant_win-malware/Payloads"
+  logs_dir: "../vagrant_win-malware/Analysis_Logs"
+
+virt_machines:
+  win-purple: "../vagrant_win10-purple"
+  kali: "../vagrant_kali-vm"
+  win-malware: "../vagrant_win-malware"

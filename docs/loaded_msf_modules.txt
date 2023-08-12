@@ -1,0 +1,40 @@
+   403  post/windows/purple/t1002                                                    normal     No     Data Compressed (T1002) Windows - Purple Team
+   404  post/windows/purple/t1003                                                    normal     No     Credential Dumping (T1003) Windows - Purple Team
+   405  post/windows/purple/t1004                                                    normal     No     Winlogon Helper DLL (T1004) Windows - Purple Team
+   406  post/windows/purple/t1006                                                    normal     No     File System Logical Offsets (T1006) Windows - Purple Team
+   407  post/windows/purple/t1012                                                    normal     No     Query Registry (T1012) Windows - Purple Team
+   408  post/windows/purple/t1013                                                    normal     No     Port Monitors (T1013) Windows - Purple Team
+   409  post/windows/purple/t1016                                                    normal     No     System Network Configuration Discovery (T1016) Windows Purple Team
+   410  post/windows/purple/t1018                                                    normal     No     Remote System Discovery (T1018) Windows - Purple Team
+   411  post/windows/purple/t1031                                                    normal     No     Modify Existing Service (T1031) Windows - Purple Team
+   412  post/windows/purple/t1034                                                    normal     No     Path Interception (T1034) Windows - Purple Team
+   413  post/windows/purple/t1035                                                    normal     No     Service Execution (T1035) Windows - Purple Team
+   414  post/windows/purple/t1037                                                    normal     No     Logon Scripts (T1037) Windows - Purple Team
+   415  post/windows/purple/t1044                                                    normal     No     File System Permissions Weakness (T1044) Windows - Purple Team
+   416  post/windows/purple/t1050                                                    normal     No     New Service (T1050) Windows - Purple Team
+   417  post/windows/purple/t1056                                                    normal     No     Input Capture (T1056) Windows - Purple Team
+   418  post/windows/purple/t1060                                                    normal     No     Run Keys (T1060) Windows - Purple Team
+   419  post/windows/purple/t1075                                                    normal     No     Pass the Hash (T1075) Windows - Purple Team
+   420  post/windows/purple/t1077                                                    normal     No     Windows Admin Shares (T1077) Windows - Purple Team
+   421  post/windows/purple/t1081                                                    normal     No     Credentials in Files (T1081) Windows - Purple Team
+   422  post/windows/purple/t1084                                                    normal     No     Windows Management Instrumentation Event Subscription (1084) Windows - Purple Team
+   423  post/windows/purple/t1086                                                    normal     No     PowerShell (T1086) Windows - Purple Team
+   424  post/windows/purple/t1089                                                    normal     No     Disabling Security Tools (T1089) Windows - Purple Team
+   425  post/windows/purple/t1099                                                    normal     No     Timestomp (T1099) Windows - Purple Team
+   426  post/windows/purple/t1103                                                    normal     No     AppInit DLLs (T1103) Windows - Purple Team
+   427  post/windows/purple/t1105                                                    normal     No     Remote File Copy (T1105) Windows - Purple Team
+   428  post/windows/purple/t1110                                                    normal     No     Brute Force (T1110) Windows - Purple Team
+   429  post/windows/purple/t1112                                                    normal     No     Modify Registry (T1112) Windows - Purple Team
+   430  post/windows/purple/t1113                                                    normal     No     Screen Capture (T1113) Windows - Purple Team
+   431  post/windows/purple/t1115                                                    normal     No     Clipboard Data (T1115) Windows - Purple Team
+   432  post/windows/purple/t1119                                                    normal     No     Automated Collection (T1119) Windows - Purple Team
+   433  post/windows/purple/t1122                                                    normal     No     Component Object Model Hijacking (T1122) Windows - Purple Team
+   434  post/windows/purple/t1123                                                    normal     No     Audio Capture (T1123) Windows - Purple Team
+   435  post/windows/purple/t1125                                                    normal     No     Video Capture (T1125) Windows - Purple Team
+   436  post/windows/purple/t1131                                                    normal     No     Authentication Package (T1131) Windows - Purple Team
+   437  post/windows/purple/t1136                                                    normal     No     Create Account (T1136) Windows - Purple Team
+   438  post/windows/purple/t1175                                                    normal     No     Distributed Component Object Model (T1175) Windows - Purple Team
+   439  post/windows/purple/t1180                                                    normal     No     T1180 Screensaver
+   440  post/windows/purple/t1201                                                    normal     No     T1201 Password Policy Discovery
+   441  post/windows/purple/t1208                                                    normal     No     Kerberoasting (T1208) Windows - Purple Team
+   442  post/windows/purple/t1209                                                    normal     No     Time Providers (T1209) Windows - Purple Team
