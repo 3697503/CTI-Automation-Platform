@@ -41,14 +41,14 @@ Unblock-File disable-defender.ps1
 # Launch Meterpreter at start up
 New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" `
     -Name "Meterpreter-Agent" `
-    -Value "C:\Users\vagrant\vagrant_data\meterpreter-0.exe"
+    -Value "C:\Users\vagrant\vagrant_data\meterpreter\meterpreter-0.exe"
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("C:\Users\vagrant\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\meterpreter-0.lnk")
-$Shortcut.TargetPath = "C:\Users\vagrant\vagrant_data\meterpreter-0.exe"
+$Shortcut.TargetPath = "C:\Users\vagrant\vagrant_data\meterpreter\meterpreter-0.exe"
 $Shortcut.Save()
 
 # Sysmon
-cp "C:\Users\vagrant\vagrant_data\sysmon-config.xml" "C:\Windows\config.xml"
+cp "C:\Users\vagrant\vagrant_data\elastic_configs\sysmon-config.xml" "C:\Windows\config.xml"
 C:\Users\vagrant\vagrant_data\Sysmon\Sysmon64.exe -accepteula -i C:\Windows\config.xml
 
 # Winlogbeat
