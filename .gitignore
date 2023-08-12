@@ -6,6 +6,7 @@ venv/
 *.pem
 .env
 logstash/
+Winlogbeat/
 .vagrant
 not_in_use/
 meterpreter-0.exe
@@ -22,4 +23,3 @@ docker_misp/ssl
 docker_misp/server-configs
 winlogbeat.yml
 elastic-agent.yml
-Winlogbeat/
