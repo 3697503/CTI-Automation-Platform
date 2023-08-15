@@ -216,15 +216,17 @@ def vagrant_winrm(cmd):
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     print(result.stdout)
 
-def cleanup():
+def cleanup(mode):
     print_info("Cleaning Up...")
     subprocess.run(f'rm -rf {LOGS_DIR}/*', shell=True)
     subprocess.run(f'rm -rf {PAYLOAD_DOWNLOAD_PATH_MALWARE}/*', shell=True)
     subprocess.run(f'rm -rf {PAYLOAD_DOWNLOAD_PATH_PURPLE}/*', shell=True)
-    vagrant_cmd(WIN_MALWARE_PATH, 'halt')
-    vagrant_cmd(KALI_PATH, 'halt')
-    vagrant_cmd(WIN_PURPLE_PATH, 'halt')
-    exit()
+    if mode == 'malware':
+        vagrant_cmd(WIN_MALWARE_PATH, 'halt')
+    elif mode == 'purple':
+        vagrant_cmd(KALI_PATH, 'halt')
+        vagrant_cmd(WIN_PURPLE_PATH, 'halt')
+    exit(0)
     
 def main():
     global MSF_CLIENT
@@ -261,5 +263,4 @@ def main():
 try:
     main()
 except KeyboardInterrupt:
-    cleanup()
-    exit()
+    cleanup(args.mode)

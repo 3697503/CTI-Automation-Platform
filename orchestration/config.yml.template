@@ -8,7 +8,7 @@ msf:
 misp:
   url: "https://localhost"
   api_token: "<MISP TOKEN>"
-  payload_download_path_purple: "../vagrant_win10-gustav/payloads"
+  payload_download_path_purple: "../vagrant_win10-purple/payloads"
   payload_download_path_malware: "../vagrant_win-malware/Payloads"
   logs_dir: "../vagrant_win-malware/Analysis_Logs"
 

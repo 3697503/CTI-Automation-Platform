@@ -16,6 +16,7 @@ import jmespath
 import subprocess
 import csv
 from scapy.all import *
+from time import sleep
 
 logging.basicConfig(level=logging.INFO, filename='logwatcher.log', filemode='w')
 
@@ -33,30 +34,30 @@ class LogWatcher():
         self.misp_event_obj.from_dict(**misp_event_dict)
         self.sandbox_tag = 'enriched_via_sandbox'
         self.enabled_logs = [
-            # {
-            #     'name': 'pestr_log.txt',
-            #     'status': False
-            # },
-            # {
-            #     'name': 'capa_log.json',
-            #     'status': False
-            # },
-            # {
-            #     'name': 'capa_log.txt',
-            #     'status': False
-            # },
-            # {
-            #     'name': 'pehash_log.json', 
-            #     'status': False
-            # },
-            # {
-            #     'name': 'peldd_log.json', 
-            #     'status': False 
-            # },
-            # {
-            #     'name': 'pescan_log.json', 
-            #     'status': False
-            # },
+            {
+                 'name': 'pestr_log.txt',
+                 'status': False
+            },
+            {
+                'name': 'capa_log.json',
+                'status': False
+            },
+            {
+                'name': 'capa_log.txt',
+                'status': False
+            },
+            {
+                'name': 'pehash_log.json', 
+                'status': False
+            },
+            {
+                'name': 'peldd_log.json', 
+                'status': False 
+            },
+            {
+                'name': 'pescan_log.json', 
+                'status': False
+            },
             {
                 'name': 'fakenet_log.pcap',
                 'status': False
@@ -65,22 +66,18 @@ class LogWatcher():
                 'name': 'fakenet_log.txt',
                 'status': False
             },
-            # {
-            #     'name': 'autoruns_log.txt',
-            #     'status': False 
-            # },
-            # {
-            #     'name': 'autoruns_log.csv',
-            #     'status': False
-            # },
-            # {
-            #     'name': 'procmon_log.pml',
-            #     'status': False
-            # },
-            # {
-            #     'name': 'procmon_log.csv',
-            #     'status': False
-            # }
+            {
+                'name': 'autoruns_log.txt',
+                'status': False 
+            },
+            {
+                'name': 'autoruns_log.csv',
+                'status': False
+            },
+            {
+                'name': 'procmon_log.csv',
+                'status': False
+            }
         ]
         
         #ioc-type --> misp_ioc_type
@@ -112,20 +109,25 @@ class LogWatcher():
     def process_logs(self, log_files):
         logging.info("Processing new logs: " + str(log_files))
         enabled_log_names = jmespath.search("[].name", self.enabled_logs)
-        for file in log_files:
-            if len([name for name in enabled_log_names if name in file]) == 0:
-                continue
-            if 'pestr_log.txt' in file:
-                self.process_pestr(file)
-            elif 'capa_log.json' in file:
-                self.process_capa(file)
-            elif 'fakenet_log.pcap' in file:
-                self.process_pcap(file)
-            elif 'autoruns_log.csv' in file:
-                self.process_autoruns(file)
-            
-            self.upload_file(file)
-            self.set_log_processed(file)
+        try:
+            for file in log_files:
+                if len([name for name in enabled_log_names if name in file]) == 0:
+                    continue
+                if 'pestr_log.txt' in file:
+                    self.process_pestr(file)
+                elif 'capa_log.json' in file:
+                    self.process_capa(file)
+                elif 'fakenet_log.pcap' in file:
+                    self.process_pcap(file)
+                elif 'autoruns_log.csv' in file:
+                    self.process_autoruns(file)
+                
+                self.upload_file(file)
+                self.set_log_processed(file)
+                sleep(3)
+        except Exception as e:
+            logging.error(e)
+            pass
 
     def set_log_processed(self, logfile_name):
         for log in self.enabled_logs:
@@ -163,18 +165,21 @@ class LogWatcher():
 
 
     def upload_file(self, logfile_name):
-        logging.info("Uploading {}".format(logfile_name))
-        file_content = None
-        with open('{}/{}'.format(self.LOGS_DIR, logfile_name), 'rb') as r_file:
-            file_content = r_file.read()
-        
-        # Upload given file
-        self.misp_event_obj.add_attribute(
-            'attachment', 
-            value=logfile_name,
-            data=base64.b64encode(file_content) 
-        )
-        self.misp_client.update_event(self.misp_event_obj)
+        try:
+            logging.info("Uploading {}".format(logfile_name))
+            file_content = None
+            with open('{}/{}'.format(self.LOGS_DIR, logfile_name), 'rb') as r_file:
+                file_content = r_file.read()
+            
+            # Upload given file
+            self.misp_event_obj.add_attribute(
+                'attachment', 
+                value=logfile_name,
+                data=base64.b64encode(file_content) 
+            )
+            self.misp_client.update_event(self.misp_event_obj)
+        except Exception as e:
+            logging.error(e)
 
     def process_pcap(self, pcap_file):
         """
@@ -188,31 +193,19 @@ class LogWatcher():
                 iocs.append((src_ip, 'ip-src'))
                 dst_ip = packet[IP].dst
                 iocs.append((dst_ip, 'ip-dst'))
-                # attribute = self.convert_to_attribute(src_ip, 'fakenet', misp_ioc_type='ip-src')
-                # self.misp_event_obj.add_attribute(**attribute)
-                # self.misp_client.update_event(self.misp_event_obj)
-                # attribute = self.convert_to_attribute(dst_ip, 'fakenet', misp_ioc_type='ip-dst')
-                # self.misp_event_obj.add_attribute(**attribute)
-                # self.misp_client.update_event(self.misp_event_obj)
 
             if packet.haslayer(DNS):
                 for query in packet[DNSQR]:
                     domain = query.qname.decode()
                     iocs.append((domain, 'domain'))
-                    # attribute = self.convert_to_attribute(domain, 'fakenet', misp_ioc_type='domain')
-                    # self.misp_event_obj.add_attribute(**attribute)
-                    # self.misp_client.update_event(self.misp_event_obj)
 
             if packet.haslayer('HTTPRequest'):
                 http_request = packet[HTTP]
                 if http_request.Method.decode() == "GET":
                     url = http_request.Host.decode() + http_request.Path.decode()
                     iocs.append((url, 'url'))
-                    # attribute = self.convert_to_attribute(url, 'fakenet', misp_ioc_type='url')
-                    # self.misp_event_obj.add_attribute(**attribute)
-                    # self.misp_client.update_event(self.misp_event_obj)
         for ioc in set(iocs):
-            attribute = self.convert_to_attribute(ioc[0], 'fakenet', misp_ioc_type=ioc[1])
+            attribute = self.convert_to_attribute(ioc[0], 'fakenet-pcap', misp_ioc_type=ioc[1])
             self.misp_event_obj.add_attribute(**attribute)
             self.misp_client.update_event(self.misp_event_obj)
 
