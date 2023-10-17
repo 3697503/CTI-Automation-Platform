@@ -141,8 +141,13 @@ def download_misp_payload(payload):
         print_info(f"[*] Selecting Session {main_msf_session_key}")
         shell = MSF_CLIENT.sessions.session(main_msf_session_key)
         print_info("[*] Executing payload")
-        output = shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None, exit_shell=False)
+        output = shell.run_shell_cmd_with_output(f"powershell.exe C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}", None)
+        # vagrant_winrm(f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command 'C:\\vagrant\\payloads\\{name}'")
         print(output)
+        cmd = f"C:\\Users\\vagrant\\vagrant_data\\payloads\\{name}"
+        # print_info(f"Running - {cmd}")
+        # shell.runsingle(cmd)
+        # shell.run_shell_cmd_with_output(cmd, end_strs)(cmd)
     elif args.mode == 'malware':
         print_info("[*] Executing Analysis Script")
         cmd = f"cd {WIN_MALWARE_PATH} && vagrant winrm --shell powershell --elevated --command 'C:\\Users\\vagrant\\vagrant_data\\analysis.ps1 {name}'"
@@ -244,10 +249,11 @@ def main():
         thread = threading.Thread(target=meterpreter_connect)
         thread.start()                                          # Start thread to connect to meterpreter
         vagrant_cmd(WIN_PURPLE_PATH, 'up')                      # Startup Purple Win VM
-        while msf_active == False:                              # Exec meterpreter till a connection is established                         
+        if msf_active == False:                              # Exec meterpreter till a connection is established  
+            print_info("Executing Meterpreter on Victim")
+            cmd = f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command 'C:\\vagrant\\meterpreter\\meterpreter-0.exe'"
+            vagrant_winrm(cmd)
             sleep(60)
-            cmd = f"cd {WIN_PURPLE_PATH} && vagrant winrm --shell powershell --elevated --command 'C:\\vagrant\\meterpreter-0.exe'"
-            vagrant_winrm(cmd) 
         print()
         read_misp_event(event_id)
         thread.join()
