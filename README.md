@@ -1,54 +1,5 @@
 # CTI Automation Platform
 
-- Use Vagrant 2.3.6 (WinRM Errors)
-- Add Elastic Agent Windows Integration
-- Add Prebuilt Rules
+_Thesis - Scaling & Automating Cyber Threat Intelligence (CTI) Operations with Free and Open-source Software (FOSS)_
 
-
-## Planned Platform Stack (Stage 1):
-* MISP deployment via Docker Compose
-  * Base OS: Ubuntu Focal
-  * MISP_Web Container: 2GB RAM
-  * MySQL Server Container: 2GB Memory Limit
-* Elastic SIEM (agent based)
-  * MISP Filebeat Module Container
-  * Windows Integration
-* Windows-based Malware Analysis Virtual Machine (VM)
-  * Deployed via Vagrant (for quick teardown and re-creation)
-  * Provisioned via Ansible (Chocolatey) and Powershell Scripts
-  * Would include tools such as Regshot, TShark/TCPDump, Process Hacker etc.
-  * Would be running the Elastic SIEM agent for log collection and analysis
-  * Would be running Sysmon
-* Node for storing encrypted payloads (this may be possible within MISP itself)
-* PyMISP based scripts for deploying payloads to the sandbox for threat emulation (fixed scenarios)
-* Jupyter Notebooks for dashboarding and generating various CTI-related metrics, and performing link analysis (graph visualization), MITRE ATT&CK Heatmap
-
-## MISP Threat Intel Platform (TIP)
-
-https://www.misp-project.org/features/
-
-MISP provides capabilities for managing Indicators of Compromise (IOC) and curating a knowledgebase to enable efficient tracking of entities related to Cybersecurity Threats (Malware Families, Threat Actors, Incidents, Campaigns). Additionally, MISP can be integrated with security controls to aid in detecting malicious behavior. 
-
-Features:
-
-- STIX Data Model enables efficient correlation of indicators and entities.
-- Existing integrations with many popular threat data feeds.
-- Python-based Expansion modules aimed at extending the platform's functionality.
-- User Interface for creation and management of threat data
-
-API: [PyMISP SDK](https://github.com/MISP/PyMISP)
-
-MISP Instance Architectural Components:
-
-[MISP dependencies](https://wlcg-soc-wg-doc.web.cern.ch/misp/deployment.html)
-- Redis
-- MySQL Server
-
-Ingesting logs into ELK:
-https://unicornsec.com/home/siem-home-lab-series-part-2
-
-## Useful Resources
-https://docs.rapid7.com/metasploit/running-metasploit-remotely/
-https://developer.hashicorp.com/vagrant/docs/providers/virtualbox/networking
-https://www.scanforsecurity.com/penetration-testing/automating-actions-attacker-using-metasploit-and-python.html
-https://stackoverflow.com/questions/44191341/i-cant-get-new-modules-to-load-in-metasploit
+An automated Cyber Threat Intelligence (CTI) apparatus, implemented via a suite of Free & Open-source Software (FOSS), focused on keeping the platform lightweight and easily re-deployable. The system ensures extensibility by extending CTI operations to other areas of Cyber Security, such as Blue Team operations, and Adversary Emulation (Purple Team operations).
